@@ -1,6 +1,7 @@
 from django.shortcuts import render, redirect
 from django.views.generic import TemplateView, View
 from django.contrib.auth import authenticate, login
+from django.contrib.auth.mixins import LoginRequiredMixin
 from .forms import UserRegistrationForm
 from .models import InventoryItem
 
@@ -8,7 +9,7 @@ from .models import InventoryItem
 class Index(TemplateView):
     template_name = 'inventory/index.html'
 
-class Dashboard(View):
+class Dashboard(LoginRequiredMixin, View):
 	def get(self, request):
 		items = InventoryItem.objects.filter(user=self.request.user.id).order_by('id')
 		return render(request, 'inventory/dashboard.html', {'items': items})

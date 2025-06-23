@@ -1,9 +1,10 @@
 from django.shortcuts import render, redirect
-from django.views.generic import TemplateView, View
+from django.urls import reverse_lazy
+from django.views.generic import TemplateView, View, CreateView, UpdateView
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.mixins import LoginRequiredMixin
-from .forms import UserRegistrationForm
-from .models import InventoryItem
+from .forms import UserRegistrationForm, InventoryItemForm
+from .models import InventoryItem, Category
 
 # Create your views here.
 class Index(TemplateView):
@@ -33,3 +34,25 @@ class SignUpView(View):
 			return redirect('index')
 
 		return render(request, 'inventory/signup.html', {'form': form})
+	
+class AddItem(LoginRequiredMixin, CreateView):
+	model = InventoryItem
+	form_class = InventoryItemForm
+	template_name = 'inventory/item-form.html'
+	success_url = reverse_lazy('dashboard')
+
+	def get_context_data(self, **kwargs):
+		context = super().get_context_data(**kwargs)
+		context['categories'] = Category.objects.all()
+		return context
+
+	def form_valid(self, form):
+		form.instance.user = self.request.user
+		return super().form_valid(form)
+
+class EditItem(LoginRequiredMixin, UpdateView):
+	model = InventoryItem
+	form_class = InventoryItemForm
+	template_name = 'inventory/item-form.html'
+	success_url = reverse_lazy('dashboard')
+	

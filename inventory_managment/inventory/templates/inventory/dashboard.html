@@ -4,7 +4,7 @@
     <div class="row">
         <div class="col-md-10 col-12 mx-auto mt-5">
             <div class="d-flex justify-content-end">
-                <a href="#" class="btn-secondary">Add To inventory</a>
+                <a href="{% url 'add-item' %}" class="btn btn-primary">Add To Inventory</a>
             </div>
 
             <table class="table table-hover table-striped">
@@ -15,7 +15,7 @@
                         <th scope="col">Qty</th>
                         <th scope="col">Category</th>
                         <th scope="col"></th>
-                        <th scope="col"></th>
+                        <th  scope="col"></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -35,7 +35,7 @@
                         <td>{{ item.name }}</td>
                         <td>{{ item.quantity }}</td>
                         <td>{{ item.category.name }}</td>
-                        <td></td>
+                        <td><a href="{% url 'edit-item' item.id %}" class="btn btn-outline-secondary">Edit</a></td>
                         <td></td>
                     </tr>
                     {% endfor %}

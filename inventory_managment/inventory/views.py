@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect
 from django.urls import reverse_lazy
-from django.views.generic import TemplateView, View, CreateView, UpdateView
+from django.views.generic import TemplateView, View, CreateView, UpdateView, DeleteView
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.mixins import LoginRequiredMixin
 from .forms import UserRegistrationForm, InventoryItemForm
@@ -55,4 +55,10 @@ class EditItem(LoginRequiredMixin, UpdateView):
 	form_class = InventoryItemForm
 	template_name = 'inventory/item-form.html'
 	success_url = reverse_lazy('dashboard')
+
+class DeleteItem(LoginRequiredMixin, DeleteView):
+	model = InventoryItem
+	template_name = 'inventory/delete_item.html'
+	success_url = reverse_lazy('dashboard')
+	content_object_name = 'item'
 	

@@ -25,12 +25,19 @@
             <table class="table table-hover table-striped">
                 <thead>
                     <tr>
-                        <th scope="col">ID</th>
-                        <th scope="col">Name</th>
-                        <th scope="col">Qty</th>
-                        <th scope="col">Category</th>
+                        <th scope="col">
+                            <a href="?sort={% if sort_by == 'id' %}-id{% else %}id{% endif %}">ID</a>
+                        </th>
+                        <th scope="col">
+                            <a href="?sort={% if sort_by == 'name' %}-name{% else %}name{% endif%}">Name</a>
+                        </th>
+                        <th scope="col">
+                            <a href="?sort={% if sort_by == 'quantity' %}-quantity{% else %}quantity{% endif%}">Quantity</a>
+                        </th>
+                        <th scope="col">
+                            <a href="?sort={% if sort_by == 'category' %}-category{% else %}category{% endif%}">Category</a>
+                        </th>
                         <th scope="col"></th>
-                        <th  scope="col"></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -53,7 +60,6 @@
                         {% else %}
                             <td class="text-success">{{ item.quantity }}</td>
                         {% endif %}
-                        <td>{{ item.quantity }}</td>
                         <td>{{ item.category.name }}</td>
                         <td><a href="{% url 'edit-item' item.id %}" class="btn btn-outline-secondary">Edit</a></td>
                         <td><a href="{% url 'delete-item' item.id %}" class="btn btn-outline-secondary">Delete</a></td>

@@ -14,7 +14,13 @@ class Index(TemplateView):
 
 class Dashboard(LoginRequiredMixin, View):
 	def get(self, request):
-		items = InventoryItem.objects.filter(user=self.request.user.id).order_by('id')
+		sort_by = request.GET.get('sort', 'id')
+		allowed_fields = ['id', 'name', 'quantity', 'category_name']
+
+		if sort_by.lstrip('-') not in [field.split('__')[0] for field in allowed_fields]:
+			sort_by = 'id'  # fallback if invalid
+	
+		items = InventoryItem.objects.filter(user=self.request.user.id).order_by(sort_by)
 
 		low_inventory = InventoryItem.objects.filter(
 			user=self.request.user.id,
@@ -33,7 +39,7 @@ class Dashboard(LoginRequiredMixin, View):
 		).values_list('id', flat=True)
 
 		return render(request, 'inventory/dashboard.html',
-					 {'items': items, 'low_inventory_ids': low_inventory_ids})
+					 {'items': items, 'low_inventory_ids': low_inventory_ids, 'sort_by': sort_by})
 
 class SignUpView(View):
 	def get(self, request):

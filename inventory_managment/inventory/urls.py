@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.urls import path
-from .views import Index, SignUpView, Dashboard, AddItem, EditItem,DeleteItem
+from .views import Index, SignUpView, Dashboard, AddItem, EditItem, DeleteItem
 from django.contrib.auth import views as auth_views
 
 urlpatterns = [

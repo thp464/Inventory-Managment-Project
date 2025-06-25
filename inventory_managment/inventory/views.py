@@ -1,4 +1,4 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse_lazy
 from django.views.generic import TemplateView, View, CreateView, UpdateView, DeleteView
 from django.contrib import messages
@@ -6,7 +6,7 @@ from django.contrib.auth import authenticate, login
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Q
 from .forms import UserRegistrationForm, InventoryItemForm
-from .models import InventoryItem, Category
+from .models import InventoryItem, Category, LogEntry
 from inventory_managment.settings import LOW_QUANTITY
 
 # Create your views here.
@@ -15,9 +15,13 @@ class Index(TemplateView):
 
 class Dashboard(LoginRequiredMixin, View):
 	def get(self, request):
+		# Get sort parameter from query string (default to 'id')
 		sort_by = request.GET.get('sort', 'id')
+
+		# Get search query (if any), stripping whitespace
 		query = request.GET.get('q','').strip()
 
+		 # Only allow specific fields to be sorted
 		allowed_fields = ['id', 'name', 'quantity', 'category_name']
 		if sort_by.lstrip('-') not in [field.split('__')[0] for field in allowed_fields]:
 			sort_by = 'id'  # fallback if invalid
@@ -25,6 +29,7 @@ class Dashboard(LoginRequiredMixin, View):
 		# Get all inventory items from the database that belong to the currently logged-in user.
 		items = InventoryItem.objects.filter(user=self.request.user.id)
 
+		# If a search query exists, filter by item name or category name (case-insensitive)
 		if query:
 			items = items.filter(
                 Q(name__icontains=query) | Q(category__name__icontains=query)
@@ -89,7 +94,13 @@ class AddItem(LoginRequiredMixin, CreateView):
 
 	def form_valid(self, form):
 		form.instance.user = self.request.user
-		return super().form_valid(form)
+		response = super().form_valid(form)
+		LogEntry.objects.create(
+			user=self.request.user,
+			item=self.object,
+			action='created'
+		)
+		return response
 
 class EditItem(LoginRequiredMixin, UpdateView):
 	model = InventoryItem
@@ -97,9 +108,40 @@ class EditItem(LoginRequiredMixin, UpdateView):
 	template_name = 'inventory/item-form.html'
 	success_url = reverse_lazy('dashboard')
 
+	def form_valid(self, form):
+		response = super().form_valid(form)
+		LogEntry.objects.create(
+			user=self.request.user,
+			item=self.object,
+			action='updated'
+		)
+		return response
+
+
 class DeleteItem(LoginRequiredMixin, DeleteView):
 	model = InventoryItem
 	template_name = 'inventory/delete_item.html'
 	success_url = reverse_lazy('dashboard')
 	content_object_name = 'item'
+	
+	def post(self, request, pk):
+		item = InventoryItem.objects.get(pk=pk, user=request.user)
+		item.is_active = False
+		item.save()
+		LogEntry.objects.create(
+            user=request.user,
+            item=item,
+            action='deleted'
+        )
+		messages.success(request, f"{item.name} was archived.")
+		return redirect('dashboard')
+	
+class ItemHistory(LoginRequiredMixin, View):
+    def get(self, request, pk):
+        item = get_object_or_404(InventoryItem, pk=pk, user=request.user)
+        logs = LogEntry.objects.filter(item=item).order_by('-timestamp')
+        return render(request, 'inventory/item-history.html', {
+            'item': item,
+            'logs': logs,
+        })
 	

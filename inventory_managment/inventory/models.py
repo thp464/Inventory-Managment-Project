@@ -19,3 +19,23 @@ class Category(models.Model):
 
     def __str__(self):
         return self.name
+
+class LogEntry(models.Model):
+    ACTION_CHOICES = [
+        ('created', 'Created'),
+        ('deleted', 'Deleted'),
+        ('archived', 'Archived')
+    ]
+
+    user = models.ForeignKey(
+        User, 
+        on_delete=models.SET_NULL, 
+        null=True,
+        related_name='inventory_logs')
+    item = models.ForeignKey('InventoryItem', on_delete=models.CASCADE)
+    action = models.CharField(max_length=10, choices=ACTION_CHOICES, default='created')
+    timestamp = models.DateTimeField(auto_now_add=True)
+    notes = models.TextField(blank=True)
+
+    def __str__(self):
+        return f"{self.user} {self.action} {self.item.name} @ {self.timestamp}"

@@ -1,0 +1,13 @@
+{% extends 'inventory/base.html' %}
+
+{% block content %}
+<h2>History for {{ item.name }}</h2>
+<ul>
+    {% for log in logs %}
+    <li>{{ log.timestamp|date:"Y-m-d H:i" }} - {{ log.user.username }} {{ log.action }}</li>
+    {% empty %}
+    <li>No history for this item.</li>
+    {% endfor %}
+</ul>
+<a href="{% url 'dashboard' %}">Back to Dashboard</a>
+{% endblock %}

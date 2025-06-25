@@ -1,12 +1,13 @@
 from django.shortcuts import render, redirect
 from django.urls import reverse_lazy
 from django.views.generic import TemplateView, View, CreateView, UpdateView, DeleteView
+from django.contrib import messages
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.db.models import Q
 from .forms import UserRegistrationForm, InventoryItemForm
 from .models import InventoryItem, Category
 from inventory_managment.settings import LOW_QUANTITY
-from django.contrib import messages
 
 # Create your views here.
 class Index(TemplateView):
@@ -15,17 +16,27 @@ class Index(TemplateView):
 class Dashboard(LoginRequiredMixin, View):
 	def get(self, request):
 		sort_by = request.GET.get('sort', 'id')
-		allowed_fields = ['id', 'name', 'quantity', 'category_name']
+		query = request.GET.get('q','').strip()
 
+		allowed_fields = ['id', 'name', 'quantity', 'category_name']
 		if sort_by.lstrip('-') not in [field.split('__')[0] for field in allowed_fields]:
 			sort_by = 'id'  # fallback if invalid
 	
-		items = InventoryItem.objects.filter(user=self.request.user.id).order_by(sort_by)
+		# Get all inventory items from the database that belong to the currently logged-in user.
+		items = InventoryItem.objects.filter(user=self.request.user.id)
+
+		if query:
+			items = items.filter(
+                Q(name__icontains=query) | Q(category__name__icontains=query)
+            )
+		
+		
+		items = items.order_by(sort_by)
 
 		low_inventory = InventoryItem.objects.filter(
 			user=self.request.user.id,
 			quantity__lte=LOW_QUANTITY
-		)
+		) 
 
 		if low_inventory.count() > 0:
 			if low_inventory.count() > 1:
@@ -38,8 +49,12 @@ class Dashboard(LoginRequiredMixin, View):
 			quantity__lte=LOW_QUANTITY
 		).values_list('id', flat=True)
 
-		return render(request, 'inventory/dashboard.html',
-					 {'items': items, 'low_inventory_ids': low_inventory_ids, 'sort_by': sort_by})
+		return render(request, 'inventory/dashboard.html', {
+			'items': items, 
+			'low_inventory_ids': low_inventory_ids, 
+			'sort_by': sort_by,
+			'query': query
+			})
 
 class SignUpView(View):
 	def get(self, request):

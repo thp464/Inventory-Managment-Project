@@ -1,13 +1,40 @@
 {% extends 'inventory/base.html' %}
 
 {% block content %}
-<h2>History for {{ item.name }}</h2>
-<ul>
-    {% for log in logs %}
-    <li>{{ log.timestamp|date:"Y-m-d H:i" }} - {{ log.user.username }} {{ log.action }}</li>
-    {% empty %}
-    <li>No history for this item.</li>
-    {% endfor %}
-</ul>
-<a href="{% url 'dashboard' %}">Back to Dashboard</a>
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-10 col-12 mx-auto">
+            <h3 class="mb-4">Transaction History for <strong>{{ item.name }}</strong></h3>
+
+            {% if logs %}
+                <table class="table table-hover table-bordered align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th scope="col">Timestamp</th>
+                            <th scope="col">User</th>
+                            <th scope="col">Action</th>
+                            <th scope="col">Notes</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for log in logs %}
+                        <tr>
+                            <td>{{ log.timestamp|date:"Y-m-d H:i" }}</td>
+                            <td>{{ log.user.username }}</td>
+                            <td class="text-capitalize">{{ log.action }}</td>
+                            <td>{{ log.notes|default:"—" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <div class="alert alert-info" role="alert">
+                    No transaction history found for this item.
+                </div>
+            {% endif %}
+
+            <a href="{% url 'dashboard' %}" class="btn btn-secondary mt-3">← Back to Dashboard</a>
+        </div>
+    </div>
+</div>
 {% endblock %}

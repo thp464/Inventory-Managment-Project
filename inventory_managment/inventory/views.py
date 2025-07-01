@@ -1,3 +1,5 @@
+import csv
+from django.http import HttpResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse_lazy
 from django.views.generic import TemplateView, View, CreateView, UpdateView, DeleteView
@@ -7,6 +9,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Q
 from .forms import UserRegistrationForm, InventoryItemForm
 from .models import InventoryItem, Category, LogEntry
+from django.contrib.auth.decorators import login_required
 from inventory_managment.settings import LOW_QUANTITY
 
 # Create your views here.
@@ -145,3 +148,23 @@ class ItemHistory(LoginRequiredMixin, View):
             'logs': logs,
         })
 	
+def export_inventory_csv(request):
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="inventory.csv"'
+
+    writer = csv.writer(response)
+    
+    writer.writerow(['ID', 'Name', 'Quantity', 'Category', 'Created By'])
+
+    items = InventoryItem.objects.filter(user=request.user)
+
+    for item in items:
+        writer.writerow([
+            item.id,
+            item.name,
+            item.quantity,
+            item.category.name if item.category else '',
+            item.user.username if item.user else '',
+        ])
+
+    return response

@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.urls import path
-from .views import Index, SignUpView, Dashboard, AddItem, EditItem, DeleteItem, ItemHistory
+from .views import (Index, SignUpView, Dashboard, AddItem, EditItem, DeleteItem, ItemHistory, export_inventory_csv, BulkActionView)
 from django.contrib.auth import views as auth_views
 
 urlpatterns = [
@@ -13,5 +13,6 @@ urlpatterns = [
     path('signup/', SignUpView.as_view(), name='signup'),
     path('login/', auth_views.LoginView.as_view(template_name='inventory/login.html'), name='login'),
     path('logout/', auth_views.LogoutView.as_view(template_name='inventory/logout.html'), name='logout'),
-    path('export-csv/', views.export_inventory_csv, name='export-csv')
+    path('export-csv/', export_inventory_csv, name='export-csv'),
+    path('bulk-action/', BulkActionView.as_view(), name='bulk_action')
 ]

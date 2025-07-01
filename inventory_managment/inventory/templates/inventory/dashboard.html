@@ -20,59 +20,84 @@
         <div class="col-md-10 col-12 mx-auto mt-4">
             <div class="d-flex justify-content-end mb-5">
                 <a href="{% url 'add-item' %}" class="btn btn-primary">Add To Inventory</a>
+                <a href="{% url 'export-csv' %}" class="btn btn-success me-2">Export to CSV</a>
             </div>
            <form method="get" class="mb-4">
                 <div class="input-group">
                     <input type="text" name="q" class="form-control" placeholder="Search items..." value="{{ request.GET.q|default:'' }}">
                     <button class="btn btn-outline-secondary" type="submit">Search</button>
                 </div>
-            </form> 
-            <table class="table table-hover table-striped">
-                <thead>
-                    <tr>
-                        <th scope="col">
-                            <a href="?sort={% if sort_by == 'id' %}-id{% else %}id{% endif %}">ID</a>
-                        </th>
-                        <th scope="col">
-                            <a href="?sort={% if sort_by == 'name' %}-name{% else %}name{% endif%}">Name</a>
-                        </th>
-                        <th scope="col">
-                            <a href="?sort={% if sort_by == 'quantity' %}-quantity{% else %}quantity{% endif%}">Quantity</a>
-                        </th>
-                        <th scope="col">
-                            <a href="?sort={% if sort_by == 'category' %}-category{% else %}category{% endif%}">Category</a>
-                        </th>
-                        <th scope="col"></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% if items|length == 0 %}
+            </form>
+            
+            
+            <form method="post" action="{% url 'bulk_action' %}">
+                {% csrf_token %}
+                <table class="table table-hover table-striped">
+                    <thead>
                         <tr>
-                            <th scope="row">-</th>
-                            <td>-</td>
-                            <td>-</td>
-                            <td>-</td>
-                            <td>-</td>
-                            <td></td>
+                            <th><input type="checkbox" id="select-all"></th>
+                            <th scope="col" class="{% if sort_by|slice:'1:' == 'id' or sort_by == 'id' %}table-primary{% endif %}">
+                                <a href="?q={{ query|urlencode }}&sort={% if sort_by == 'id' %}-id{% else %}id{% endif %}">ID</a>
+                            </th>
+                            <th scope="col" class="{% if sort_by|slice:'1:' == 'name' or sort_by == 'name' %}table-primary{% endif %}">
+                                <a href="?q={{ query|urlencode }}&sort={% if sort_by == 'name' %}-name{% else %}name{% endif %}">Name</a>
+                            </th>
+                            <th scope="col" class="{% if sort_by|slice:'1:' == 'quantity' or sort_by == 'quantity' %}table-primary{% endif %}">
+                                <a href="?q={{ query|urlencode }}&sort={% if sort_by == 'quantity' %}-quantity{% else %}quantity{% endif %}">Quantity</a>
+                            </th>
+                            <th scope="col" class="{% if sort_by|slice:'1:' == 'category__name' or sort_by == 'category__name' %}table-primary{% endif %}">
+                                <a href="?q={{ query|urlencode }}&sort={% if sort_by == 'category__name' %}-category__name{% else %}category__name{% endif %}">Category</a>
+                            </th>
+                            <th>Actions</th>
                         </tr>
-                    {% endif %}
-                    {% for item in items %}
-                    <tr>
-                        <th scope="row">{{ item.id }}</th>
-                        <td>{{ item.name }}</td>
-                        {% if item.id in low_inventory_ids %}
-                            <td class="text-danger">{{ item.quantity }}</td>
-                        {% else %}
-                            <td class="text-success">{{ item.quantity }}</td>
+                    </thead>
+                    <tbody>
+                        {% if items|length == 0 %}
+                            <tr>
+                                <th scope="row">-</th>
+                                <td>-</td>
+                                <td>-</td>
+                                <td>-</td>
+                                <td>-</td>
+                                <td></td>
+                            </tr>
                         {% endif %}
-                        <td>{{ item.category.name }}</td>
-                        <td><a href="{% url 'edit-item' item.id %}" class="btn btn-outline-secondary">Edit</a></td>
-                        <td><a href="{% url 'delete-item' item.id %}" class="btn btn-outline-secondary">Delete</a></td>
-                        <td><a href="{% url 'item-history' item.id %}" class="btn btn-info">History</a></td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+                        {% for item in items %}
+                        <tr>
+                            <td><input type="checkbox" name="selected_items" value="{{ item.id }}"></td>
+                            <th scope="row">{{ item.id }}</th>
+                            <td>{{ item.name }}</td>
+                            {% if item.id in low_inventory_ids %}
+                                <td class="text-danger">{{ item.quantity }}</td>
+                            {% else %}
+                                <td class="text-success">{{ item.quantity }}</td>
+                            {% endif %}
+                            <td>{{ item.category.name }}</td>
+                            <td>
+                                <a href="{% url 'edit-item' item.id %}" class="btn btn-outline-secondary">Edit</a>
+                                <a href="{% url 'delete-item' item.id %}" class="btn btn-outline-secondary">Delete</a>
+                                <a href="{% url 'item-history' item.id %}" class="btn btn-info">History</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+
+                <div class="mb-4">
+                    <button type="submit" name="action" value="delete" class="btn btn-danger">Delete Selected</button>
+                    <button type="submit" name="action" value="export" class="btn btn-success">Export Selected</button>
+                </div>
+            </form>
+            <p>Current sort_by: {{ sort_by }}</p>
         </div>
     </div>
+
+    <script>
+    document.getElementById('select-all').addEventListener('change', function(e) {
+        const checked = e.target.checked;
+        document.querySelectorAll('input[name="selected_items"]').forEach(cb => {
+            cb.checked = checked;
+        });
+    });
+    </script>
 {% endblock content %}

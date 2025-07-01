@@ -1,7 +1,8 @@
 import csv
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import render, redirect, get_object_or_404
-from django.urls import reverse_lazy
+from django.urls import reverse_lazy, reverse
+from django.utils.encoding import smart_str
 from django.views.generic import TemplateView, View, CreateView, UpdateView, DeleteView
 from django.contrib import messages
 from django.contrib.auth import authenticate, login
@@ -25,12 +26,13 @@ class Dashboard(LoginRequiredMixin, View):
 		query = request.GET.get('q','').strip()
 
 		 # Only allow specific fields to be sorted
-		allowed_fields = ['id', 'name', 'quantity', 'category_name']
-		if sort_by.lstrip('-') not in [field.split('__')[0] for field in allowed_fields]:
-			sort_by = 'id'  # fallback if invalid
-	
+		allowed_fields = ['id', 'name', 'quantity', 'category__name']
+		clean_sort = sort_by.lstrip('-')
+		if clean_sort not in allowed_fields:
+			sort_by = 'id'
+
 		# Get all inventory items from the database that belong to the currently logged-in user.
-		items = InventoryItem.objects.filter(user=self.request.user.id)
+		items = InventoryItem.objects.filter(user=self.request.user.id, is_active=True)
 
 		# If a search query exists, filter by item name or category name (case-insensitive)
 		if query:
@@ -43,7 +45,8 @@ class Dashboard(LoginRequiredMixin, View):
 
 		low_inventory = InventoryItem.objects.filter(
 			user=self.request.user.id,
-			quantity__lte=LOW_QUANTITY
+			quantity__lte=LOW_QUANTITY,
+			is_active=True
 		) 
 
 		if low_inventory.count() > 0:
@@ -54,7 +57,8 @@ class Dashboard(LoginRequiredMixin, View):
 
 		low_inventory_ids = InventoryItem.objects.filter(
 			user=self.request.user.id,
-			quantity__lte=LOW_QUANTITY
+			quantity__lte=LOW_QUANTITY,
+			is_active=True
 		).values_list('id', flat=True)
 
 		return render(request, 'inventory/dashboard.html', {
@@ -156,7 +160,7 @@ def export_inventory_csv(request):
     
     writer.writerow(['ID', 'Name', 'Quantity', 'Category', 'Created By'])
 
-    items = InventoryItem.objects.filter(user=request.user)
+    items = InventoryItem.objects.filter(user=request.user, is_active=True)
 
     for item in items:
         writer.writerow([
@@ -168,3 +172,39 @@ def export_inventory_csv(request):
         ])
 
     return response
+
+class BulkActionView(LoginRequiredMixin, View):
+    def post(self, request):
+        selected_ids = request.POST.getlist('selected_items')
+        action = request.POST.get('action')
+
+        if not selected_ids:
+            messages.error(request, "No items selected.")
+            return HttpResponseRedirect(reverse('dashboard'))
+
+        items = InventoryItem.objects.filter(id__in=selected_ids, user=request.user)
+
+        if action == 'delete':
+            count, _ = items.delete()
+            messages.success(request, f"Deleted {count} items.")
+            return HttpResponseRedirect(reverse('dashboard'))
+
+        elif action == 'export':
+            # Export selected items as CSV
+            response = HttpResponse(content_type='text/csv')
+            response['Content-Disposition'] = 'attachment; filename=inventory_export.csv'
+
+            writer = csv.writer(response)
+            writer.writerow(['ID', 'Name', 'Quantity', 'Category'])
+            for item in items:
+                writer.writerow([
+                    item.id,
+                    smart_str(item.name),
+                    item.quantity,
+                    smart_str(item.category.name if item.category else '')
+                ])
+            return response
+
+        else:
+            messages.error(request, "Invalid action.")
+            return HttpResponseRedirect(reverse('dashboard'))

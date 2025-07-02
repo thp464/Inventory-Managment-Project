@@ -1,22 +1,25 @@
 import csv
-from django.http import HttpResponse, HttpResponseRedirect
+from django.http import HttpResponse
 from django.shortcuts import render, redirect, get_object_or_404
-from django.urls import reverse_lazy, reverse
-from django.utils.encoding import smart_str
+from django.urls import reverse_lazy
 from django.views.generic import TemplateView, View, CreateView, UpdateView, DeleteView
 from django.contrib import messages
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Q
+
+from rest_framework import viewsets, permissions
+
 from .forms import UserRegistrationForm, InventoryItemForm
 from .models import InventoryItem, Category, LogEntry
-from django.contrib.auth.decorators import login_required
+from .serializers import InventoryItemSerializer, CategorySerializer
 from inventory_managment.settings import LOW_QUANTITY
 
-# Create your views here.
+# Homepage View
 class Index(TemplateView):
     template_name = 'inventory/index.html'
 
+# Dashboard View - Displays inventory list with sorting, searching, and low inventory alerts
 class Dashboard(LoginRequiredMixin, View):
 	def get(self, request):
 		# Get sort parameter from query string (default to 'id')
@@ -43,6 +46,7 @@ class Dashboard(LoginRequiredMixin, View):
 		
 		items = items.order_by(sort_by)
 
+        # Low inventory alerts
 		low_inventory = InventoryItem.objects.filter(
 			user=self.request.user.id,
 			quantity__lte=LOW_QUANTITY,
@@ -208,3 +212,22 @@ class BulkActionView(LoginRequiredMixin, View):
         else:
             messages.error(request, "Invalid action.")
             return HttpResponseRedirect(reverse('dashboard'))
+		
+# --- REST API Views ---
+
+# InventoryItem API - Full CRUD for authenticated users		
+class InventoryItemViewSet(viewsets.ModelViewSet):
+    serializer_class = InventoryItemSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return InventoryItem.objects.filter(user=self.request.user, is_active=True)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+# Category API - Read-only for authenticated users
+class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = Category.objects.all()
+    serializer_class = CategorySerializer
+    permission_classes = [permissions.IsAuthenticated]

@@ -6,7 +6,6 @@ class InventoryItem(models.Model):
     quantity = models.IntegerField()
     category = models.ForeignKey('Category', on_delete=models.SET_NULL, blank=True, null=True)
     date_created = models.DateTimeField(auto_now_add=True)
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
     is_active = models.BooleanField(default=True)
 
     def __str__(self):
@@ -25,7 +24,9 @@ class LogEntry(models.Model):
     ACTION_CHOICES = [
         ('created', 'Created'),
         ('deleted', 'Deleted'),
-        ('archived', 'Archived')
+        ('archived', 'Archived'),
+        ('updated', 'Updated'),
+
     ]
 
     user = models.ForeignKey(

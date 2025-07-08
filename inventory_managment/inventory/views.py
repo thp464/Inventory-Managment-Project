@@ -35,7 +35,7 @@ class Dashboard(LoginRequiredMixin, View):
 			sort_by = 'id'
 
 		# Get all inventory items from the database that belong to the currently logged-in user.
-		items = InventoryItem.objects.filter(user=self.request.user.id, is_active=True)
+		items = InventoryItem.objects.filter(is_active=True)
 
 		# If a search query exists, filter by item name or category name (case-insensitive)
 		if query:
@@ -48,7 +48,6 @@ class Dashboard(LoginRequiredMixin, View):
 
         # Low inventory alerts
 		low_inventory = InventoryItem.objects.filter(
-			user=self.request.user.id,
 			quantity__lte=LOW_QUANTITY,
 			is_active=True
 		) 
@@ -60,7 +59,6 @@ class Dashboard(LoginRequiredMixin, View):
 				messages.error(request, f'{low_inventory.count()} item has low invetory')
 
 		low_inventory_ids = InventoryItem.objects.filter(
-			user=self.request.user.id,
 			quantity__lte=LOW_QUANTITY,
 			is_active=True
 		).values_list('id', flat=True)
@@ -144,13 +142,14 @@ class DeleteItem(LoginRequiredMixin, DeleteView):
             item=item,
             action='deleted'
         )
+		Context = None
 		messages.success(request, f"{item.name} was archived.")
 		return redirect('dashboard')
 	
 class ItemHistory(LoginRequiredMixin, View):
     def get(self, request, pk):
-        item = get_object_or_404(InventoryItem, pk=pk, user=request.user)
-        logs = LogEntry.objects.filter(item=item).order_by('-timestamp')
+        item = get_object_or_404(InventoryItem, pk=pk)
+        logs = LogEntry.objects.filter(item=item).order_by('-timestamp')		
         return render(request, 'inventory/item-history.html', {
             'item': item,
             'logs': logs,
